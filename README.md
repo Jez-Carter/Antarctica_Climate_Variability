@@ -1,6 +1,6 @@
 # Antarctica_Climate_Variability
 
-This code examines variability in an ensemble of RCM and Renalaysis outputs over Antarctica:
+This code examines variability in an ensemble of RCM and Renalaysis outputs over Antarctica from ECMWF (https://www.ecmwf.int/) and the Antarctic CORDEX project (https://climate-cryosphere.org/antarctic/). The models used include:
 
 | **RCM/Reanalysis Dataset** | **Domain** | **Driving Data** | **H.Resolution [km]** | **Label**   |
 |----------------------------|------------|------------------|-----------------------|-------------|
