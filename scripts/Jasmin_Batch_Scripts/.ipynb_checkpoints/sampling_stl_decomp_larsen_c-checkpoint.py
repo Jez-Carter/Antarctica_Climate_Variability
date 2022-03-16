@@ -9,7 +9,7 @@ max_time = "00:15:00"
 expected_time = "00:05:00"
 
 job_name = f"larsenc_sampling"
-python_script_path = f"/home/users/carter10/Antarctica_Climate_Variability/scripts/sampling_stl_decomp_larsen_c.py"
+python_script_path = f"/home/users/carter10/Antarctica_Climate_Variability/scripts/sampling_stl_decomp_amery.py"
 
 subprocess.call(["sbatch", 
                         "-p", "short-serial-4hr",

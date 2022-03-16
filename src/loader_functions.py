@@ -86,12 +86,12 @@ def load_raw_data(data_basepath,RCM,resolution,driving_data,year,variable):
     elif RCM =='ERA-Interim':         
         cube = cubelist[0]
         if variable in ('total_precip', 'snowfall','snowmelt'):
-            cube.data = cube.data*10**3 # Going from units of grams to kilograms
+            cube.data = cube.data*10**3 # Going from units of tonnes to kilograms
             cube = cube[3::4,:,:] # Only keeping 12 hour accumulation measurements.    
     elif RCM =='ERA5':
         cube = cubelist[0]
         if variable in ('total_precip', 'snowfall','snowmelt'):
-            cube.data = cube.data*10**3 # Going from units of grams to kilograms
+            cube.data = cube.data*10**3 # Going from units of tonnes to kilograms
     
     aux_coord_names = []
     for coord in cube.aux_coords:

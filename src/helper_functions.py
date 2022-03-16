@@ -106,6 +106,17 @@ def examine_postprocessed_data(filename,path):
     print('End Date =',time.units.num2date(time.points[-1:]))
     print('Units =',time.units)
     print('Frequency =',time.points[1]-time.points[0])
+    
+def regriding_impact(filename,paths,mask):
+    broadcasted_mask = np.broadcast_to(mask[np.newaxis,:,:],[12,392,504])
+    
+    for path in paths:
+        cube = iris.load(path+filename)[0]
+        cube.data = cube.data*12250**2/10**12
+        cube.data = ma.masked_where(broadcasted_mask==False, cube.data) # masking to land only
+        print(color.BOLD +color.PURPLE + path+filename + color.END)  
+        print('Mean =',cube.data.mean())
+        print('Sum =',cube.data.sum())
 
 def regrid(cube,grid_cube,method):
     

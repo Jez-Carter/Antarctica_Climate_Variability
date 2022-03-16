@@ -7,6 +7,13 @@ import pandas as pd
 pd.set_option('display.precision',2)
 import matplotlib.pyplot as plt
 from scipy.stats.stats import pearsonr
+from math import floor,log10
+from src.helper_functions import RMSE
+
+#Colourblind friendly palette for line plots.
+CB_color_cycle = ['#377eb8', '#ff7f00', '#4daf4a',
+                  '#f781bf', '#a65628', '#984ea3',
+                  '#999999', '#e41a1c', '#dede00']
 
 def pcolormesh_basemapplot(cube,basemap,vmin,vmax,cmap=None,alpha=1):
 
@@ -64,6 +71,70 @@ def correlation_scatter_plot(input_path,variables,component,mask,mean_melt,subpl
         plt.subplot(subplot_dimensions[0], subplot_dimensions[1], plt_number)
         
         plot = plt.scatter(x_index,y_index,s=values*scale,marker='s',c=values,vmin=vmin,vmax=1,cmap='viridis')
+        plots.append(plot)
+    return(plots)
+
+def rmsd_scatter_plot(input_path,variables,mask,mean_melt,subplot_dimensions,plt_numbers,scale,vmins,vmaxs):
+    plots = []
+    broadcasted_mean_melt = np.broadcast_to(mean_melt[np.newaxis,np.newaxis,:,:],[8,8,392,504])
+    broadcasted_mask = np.broadcast_to(mask[np.newaxis,np.newaxis,:,:],[8,8,392,504])
+    
+    for variable,plt_number,vmin,vmax in zip(variables,plt_numbers,vmins,vmaxs):
+        rmsd_data = np.load(f'{input_path}ensemble_stl_decomp_rmse_{variable}.npy') # has shape [64,392,504]
+        ensemble_mean_trend_stddev = np.load(f'{input_path}ensemble_stl_decomp_{variable}_trend_stddev.npy').mean(axis=0) #has shape [392,504], will be used to express RMSD as proportion
+        rmsd_data = rmsd_data.reshape((8,8,392,504)) # reshaping 
+        rmsd_data = ma.masked_where(broadcasted_mask==False, rmsd_data) # masking to land only
+        if variable == 'melt':
+            rmsd_data = ma.masked_where(broadcasted_mean_melt <= 1, rmsd_data) #masking based on mean melt
+            
+        if variable in ['snowfall','melt']:
+            rmsd_data = rmsd_data/np.broadcast_to(ensemble_mean_trend_stddev[np.newaxis,np.newaxis,:,:],[8,8,392,504]) # turning into proportional difference
+        mean_rmsd = np.nanmean(rmsd_data,axis=(2,3)) # returns the mean value across all the non-masked grid-cells, returns 8x8 array
+        
+        models = ['ERAI','ERA5','MetUM(044)','MetUM(011)','MAR(ERAI)','MAR(ERA5)', 'RACMO(ERAI)','RACMO(ERA5)']  
+        model_numbers = np.array([0,1,2,3,4,5,6,7])
+        x_index,y_index = np.meshgrid(model_numbers,model_numbers)
+        values = np.flip(mean_rmsd,axis=0) # Note we're going to flip the y axis which is why we also flip the values
+        
+        plt.subplot(subplot_dimensions[0], subplot_dimensions[1], plt_number)
+        
+        plot = plt.scatter(x_index,y_index,s=scale,marker='s',c=values,vmin=vmin,vmax=vmax,cmap='viridis')
+        plots.append(plot)
+    return(plots)
+
+def rmsd_scatter_plot_percentage_change(input_path,variables,mask,mean_melt,subplot_dimensions,plt_numbers,scale,vmins,vmaxs):
+    plots = []
+    broadcasted_mean_melt = np.broadcast_to(mean_melt[np.newaxis,np.newaxis,:,:],[8,8,392,504])
+    broadcasted_mask = np.broadcast_to(mask[np.newaxis,np.newaxis,:,:],[8,8,392,504])
+    
+    for variable,plt_number,vmin,vmax in zip(variables,plt_numbers,vmins,vmaxs):
+        rmsd = np.load(f'{input_path}ensemble_stl_decomp_rmse_{variable}.npy') # has shape [64,392,504]
+        rmsd_bias_seasonal_residual_adjusted = np.load(f'{input_path}ensemble_stl_decomp_rmse_bias_seasonal_residual_adjusted_{variable}.npy') # has shape [64,392,504]
+        ensemble_mean_trend_stddev = np.load(f'{input_path}ensemble_stl_decomp_{variable}_trend_stddev.npy').mean(axis=0) #has shape [392,504], will be used to express RMSD as proportion
+        
+        rmsd = rmsd.reshape((8,8,392,504)) # reshaping 
+        rmsd_bias_seasonal_residual_adjusted = rmsd_bias_seasonal_residual_adjusted.reshape((8,8,392,504)) # reshaping 
+        rmsd = ma.masked_where(broadcasted_mask==False, rmsd) # masking to land only
+        rmsd_bias_seasonal_residual_adjusted = ma.masked_where(broadcasted_mask==False, rmsd_bias_seasonal_residual_adjusted) # masking to land only
+        if variable == 'melt':
+            rmsd = ma.masked_where(broadcasted_mean_melt <= 1, rmsd) #masking based on mean melt
+            rmsd_bias_seasonal_residual_adjusted = ma.masked_where(broadcasted_mean_melt <= 1, rmsd_bias_seasonal_residual_adjusted) #masking based on mean melt
+        if variable in ['snowfall','melt']:
+            rmsd = rmsd/np.broadcast_to(ensemble_mean_trend_stddev[np.newaxis,np.newaxis,:,:],[8,8,392,504]) # turning into proportional difference
+            rmsd_bias_seasonal_residual_adjusted = rmsd_bias_seasonal_residual_adjusted/np.broadcast_to(ensemble_mean_trend_stddev[np.newaxis,np.newaxis,:,:],[8,8,392,504]) # turning into proportional difference
+        
+        mean_rmsd = np.nanmean(rmsd,axis=(2,3)) # returns the mean value across all the non-masked grid-cells, returns 8x8 array
+        mean_rmsd_bias_seasonal_residual_adjusted = np.nanmean(rmsd_bias_seasonal_residual_adjusted,axis=(2,3)) # returns the mean value across all the non-masked grid-cells, returns 8x8 array
+        
+        rmsd_percentage_change = (mean_rmsd-mean_rmsd_bias_seasonal_residual_adjusted)/mean_rmsd
+        
+        models = ['ERAI','ERA5','MetUM(044)','MetUM(011)','MAR(ERAI)','MAR(ERA5)', 'RACMO(ERAI)','RACMO(ERA5)']  
+        model_numbers = np.array([0,1,2,3,4,5,6,7])
+        x_index,y_index = np.meshgrid(model_numbers,model_numbers)
+        values = np.flip(rmsd_percentage_change,axis=0) # Note we're going to flip the y axis which is why we also flip the values
+        plt.subplot(subplot_dimensions[0], subplot_dimensions[1], plt_number)
+        
+        plot = plt.scatter(x_index,y_index,s=scale,marker='s',c=values,vmin=vmin,vmax=vmax,cmap='viridis')
         plots.append(plot)
     return(plots)
         
@@ -238,7 +309,7 @@ def rmsd_table(input_path,variables,mask,mean_melt):
 def stl_example_plot(input_path,labels_fontsize,ylabel_pad,linewidth,year_min,year_max,year_tick_freq,title_height):
     
     variables = ['snowfall','temperature','melt']
-    y_labels = ["Snowfall/mmWEq","Temperature/K","Melt/mmWEq"]
+    y_labels = ["Snowfall / mmWEq","Temperature / K","Melt / mmWEq"]
     col_numbers = [1,2,3]
     ylimits = [[0,300,20,120,-60,100,-100,130],[240,275,255,267,-13,15,-9,7.5],[0,270,0,45,-40,150,-80,170]]
     ystepsizes = [[50,20,30,40],[5,2,5,3],[50,10,40,40]]
@@ -258,7 +329,7 @@ def stl_example_plot(input_path,labels_fontsize,ylabel_pad,linewidth,year_min,ye
 
             plt.subplot(4, 3, 3*i+col_number)
             for j in np.arange(0,8,1):
-                plt.plot(x,data[j],label = ensemble_names[j],alpha=0.7, linewidth=linewidth)
+                plt.plot(x,data[j],label = ensemble_names[j],alpha=0.7, linewidth=linewidth, color = CB_color_cycle[j])
             plt.plot(x,data.mean(axis=0),label = 'Ensemble Mean',alpha=0.7, linewidth=linewidth,color='k')
             plt.ylim((ylimit[i*2],ylimit[i*2+1]))
             plt.ylabel(y_label,fontsize=labels_fontsize,labelpad=ylabel_pad)
@@ -268,7 +339,7 @@ def stl_example_plot(input_path,labels_fontsize,ylabel_pad,linewidth,year_min,ye
             plt.gca().set_title(titles[i],loc='center', x=0.5, y=title_height,fontsize=labels_fontsize)
             if i==3:
                 plt.xlabel("Year",fontsize=labels_fontsize)
-    
+                
 def rmsd_average_table(input_path,variables,mask,mean_melt):
     broadcasted_mean_melt = np.broadcast_to(mean_melt[np.newaxis,np.newaxis,:,:],[8,8,392,504])
     broadcasted_mask = np.broadcast_to(mask[np.newaxis,np.newaxis,:,:],[8,8,392,504])
@@ -325,6 +396,51 @@ def relative_strength_table(input_path,variables,mask,mean_melt):
     with pd.option_context('display.float_format', '{:,.0f}%'.format):
         print(f'Relative Strengths')
         display(df)
+        
+def totals_table(input_path,variables):
     
+    for variable in variables:
+        
+        ice_sheet_only_totals = np.load(f'{input_path}ensemble_stl_decomp_{variable}_icesheetonly_total.npy') #has shape [8,3,456] monthly totals
+        
+        if variable == 'temperature':
+            mean = ice_sheet_only_totals[:,0].mean(1) -273.15 # shape [8]
+        else:
+            mean = ice_sheet_only_totals[:,0].mean(1) # shape [8]
+        trend_stddev = ice_sheet_only_totals[:,0].std(1)
+        seasonal_stddev = ice_sheet_only_totals[:,1].std(1)
+        residual_stddev = ice_sheet_only_totals[:,2].std(1)
+        totals = [mean,trend_stddev,seasonal_stddev,residual_stddev] # list of length 4, with arrays of shape [8]
+        for i in np.arange(0,4,1):
+            totals[i] = np.append(totals[i],totals[i].mean()) # adds an average column
+        totals = np.array(totals) # shape [4,9]
+        
+        if variable != 'temperature':
+            totals = totals/10**12 # converting to GT
+        
+        models = ['ERAI','ERA5','MetUM(044)','MetUM(011)','MAR(ERAI)','MAR(ERA5)', 'RACMO(ERAI)','RACMO(ERA5)','Average'] 
+        rows = ['Monthly Mean','Trend Standard Deviation','Seasonal Standard Deviation','Residual Standard Deviation']
+        df = pd.DataFrame(data=totals,columns=models,index=rows)
+        with pd.option_context('display.float_format', '{:,.1f}'.format):
+            print(f'Totals:{variable}')
+            display(df.applymap(lambda x: round(x, 3 - int(floor(log10(abs(x)))))))
+            #print(df.applymap(lambda x: round(x, 3 - int(floor(log10(abs(x)))))).to_latex(index=False)) 
+
+def rmsd_icesheet_table(input_path,variables):
+    models = ['ERAI','ERA5','MetUM(044)','MetUM(011)','MAR(ERAI)','MAR(ERA5)', 'RACMO(ERAI)','RACMO(ERA5)'] 
+    table_titles = ['RMSD Average Ice Sheet Wide Near-Surface Air Temperature / K','RMSD Total Ice Sheet Wide Snowfall / GT','RMSD Total Ice Sheet Wide Melt / GT']
+    for variable,table_title in zip(variables,table_titles):
+        ice_sheet_only_totals = np.load(f'{input_path}ensemble_stl_decomp_{variable}_icesheetonly_total.npy').sum(axis=1) #has shape [8,456] monthly totals
+        rmsds = []
+        for i in np.arange(0,8,1):
+            for j in np.arange(0,8,1):
+                rmsds.append(RMSE(ice_sheet_only_totals[i],ice_sheet_only_totals[j]))
+        data = np.array(rmsds).reshape(8,8)
+        if variable != 'temperature':
+            data = data/10**12 # converting to GT
+        df = pd.DataFrame(data=data,columns=models,index=models)
+        with pd.option_context('display.float_format', '{:,.1f}'.format):
+            print(table_title)
+            display(df)  
     
     

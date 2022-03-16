@@ -16,8 +16,8 @@ variables = ['snowfall','temperature','melt']
 
 for variable in variables:
     data = np.load(f'{input_path}ensemble_stl_decomp_{variable}.npy') #has shape [8,3,456,392,504]
-    data = data[:,:,:,235,55] # filtering to Larsen C grid cell
-    np.save(f'{temporary_destination_path}/ensemble_stl_decomp_{variable}_larsen_c',data)
+    data = data[:,:,:,290,400] # filtering to Larsen C grid cell
+    np.save(f'{temporary_destination_path}/ensemble_stl_decomp_{variable}_amery',data)
 
 for file_name in os.listdir(temporary_destination_path):
     shutil.move(f'{temporary_destination_path}/{file_name}', f'{final_destination_path}{file_name}')    
