@@ -19,7 +19,7 @@ In addition to python scripts there are jupyter notebook files within the /scrip
 
 There are 3 modules within the /src folder: helper_functions; loader_functions; ploter_functions. These modules contain useful functions that are called from the different .py script files. 
 
-A paper has been written summarising the main findings from the work: .............
+A paper has been written summarising the main findings from the work, which is currently in review, see: 'Variability in Antarctic Surface Climatology Across Regional Climate Models and Reanalysis Datasets' J.Carter et al.
 
 All plots and tables from the paper can be generated in the 'Paper Figures and Tables' and 'Appendix Figures and Tables' notebook files within the scripts folder.
 
