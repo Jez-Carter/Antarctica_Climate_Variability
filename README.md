@@ -25,6 +25,6 @@ All plots and tables from the paper can be generated in the 'Paper Figures and T
 
 The order dependency of the code to go from the raw data to the data used in the figures and tables is shown below:
 
-![plot](./Code_structure.jpg)
+![plot](./Code_Structure.jpg)
 
 
