@@ -12,8 +12,8 @@ final_destination_path = '/gws/nopw/j04/lancs_atmos/users/carter10/Antarctica_Cl
 
 os.mkdir(temporary_destination_path) #Creating temporary directory to save results to (will delete this dir later)
 
-ensemble_stl_decomp_melt = np.load(f'{input_path}ensemble_stl_decomp_melt.npy') # returns shape [8,3,456,392,504]
-mean_melt = ensemble_stl_decomp_melt.sum(1).mean((0,1)) # summing along component axis and taking mean along time axis and model axis
+ensemble_melt = np.load(f'{input_path}ensemble_melt.npy') # returns shape [8,456,392,504]
+mean_melt = ensemble_melt.mean((0,1)) # taking mean along time axis and model axis
 
 np.save(f'{temporary_destination_path}mean_melt',mean_melt)
 
